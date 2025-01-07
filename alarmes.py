@@ -8,18 +8,13 @@ import os
 import shutil
 import sys
 
-# Inicialize o mixer do pygame
 pygame.mixer.init()
 
-# Caminho do diretório de áudios (para PyInstaller)
 if getattr(sys, 'frozen', False):
-    # Se o código está sendo executado como um executável, usa o diretório extraído
     direcao_do_arquivo = sys._MEIPASS
 else:
-    # Se o código está sendo executado como um script normal
     direcao_do_arquivo = os.path.dirname(os.path.abspath(__file__))
 
-# Caminho para o diretório 'audios'
 diretorio_audios = os.path.join(direcao_do_arquivo, "audios")
 alarme_som = os.path.join(diretorio_audios, "naotrabalha.mp3")
 
@@ -140,17 +135,23 @@ class App:
                 return evento["hora"], int(tempo_restante), evento["tipo"]
         return None, None, None
 
-    def testar_audio(self):
-        """Reproduz o áudio selecionado para teste.""" 
-        global alarme_som, audio_em_reproducao
-        try:
-            alarme_som = os.path.join(diretorio_audios, self.audio_selecionado.get())  # Carrega o áudio selecionado
-            pygame.mixer.music.load(alarme_som)
-            pygame.mixer.music.play()
-            audio_em_reproducao = True  # Marca o áudio como em reprodução
-            self.desligar_alarme_button.config(state=tk.NORMAL)  # Habilita o botão "Desligar Áudio"
-        except Exception as e:
-            messagebox.showerror("Erro", f"Erro ao tocar o áudio: {e}")
+        def testar_audio(self):
+            """Reproduz o áudio selecionado para teste.""" 
+            global alarme_som, audio_em_reproducao
+            try:
+                alarme_som = os.path.join(diretorio_audios, self.audio_selecionado.get())  
+                
+                # Verifique se o arquivo de áudio existe antes de tentar carregar
+                if not os.path.exists(alarme_som):
+                    raise FileNotFoundError(f"Arquivo de áudio não encontrado: {alarme_som}")
+                
+                pygame.mixer.music.load(alarme_som)
+                pygame.mixer.music.play()
+                audio_em_reproducao = True  
+                self.desligar_alarme_button.config(state=tk.NORMAL)  
+            except Exception as e:
+                messagebox.showerror("Erro", f"Erro ao tocar o áudio: {e}")
+
 
     def tocar_alarme(self):
         """Reproduz o som do alarme e habilita o botão para desligar.""" 
