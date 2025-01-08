@@ -27,7 +27,7 @@ def gerar_horarios():
         horarios.append({"hora": f"{hora:02d}:30", "tipo": "DS"})  # Eventos de 30 minutos (DS)
     return horarios
 
-# Lista de horários dos eventos
+
 eventos = gerar_horarios()
 
 class App:
@@ -35,64 +35,74 @@ class App:
         self.root = root
         self.root.title("Monitor de Eventos")
         self.root.configure(bg="#f0f4f7")
-        
+
         # Inicializa a lista de áudios
         self.audios = self.carregar_audios()
-        
-        # Calcula a posição central da janela
+
+        # Configuração da janela
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
-        window_width = 500  # Largura da janela
-        window_height = 350  # Altura da janela
-        
-        # Calcula a posição (centro da tela)
+        window_width = 500
+        window_height = 400
         position_top = int((screen_height / 2) - (window_height / 2))
         position_right = int((screen_width / 2) - (window_width / 2))
-        
-        # Definindo a geometria da janela (posição e tamanho)
         self.root.geometry(f'{window_width}x{window_height}+{position_right}+{position_top}')
-        
+
         # Cabeçalho
         header_frame = tk.Frame(self.root, bg="#4e79a7")
         header_frame.pack(fill="x", pady=10)
         header_label = tk.Label(header_frame, text="Monitor de Eventos", fg="white", font=("Roboto", 16, "bold"), bg="#4e79a7")
         header_label.pack(pady=10)
-        
-        # Horário Atual
+
+        # Relógio e próximo evento
         self.horario_atual_label = tk.Label(self.root, text="", font=("Arial", 14), bg="#f0f4f7")
         self.horario_atual_label.pack(pady=10)
-        
-        # Próximo Evento
+
         self.proximo_evento_label = tk.Label(self.root, text="", font=("Arial", 14), bg="#f0f4f7")
         self.proximo_evento_label.pack(pady=10)
-        
-        # Configurações de Áudio
-        audio_frame = tk.Frame(self.root, bg="#f0f4f7")
-        audio_frame.pack(pady=20)
-        
+
+        # Menu de Áudios
         self.audio_selecionado = tk.StringVar()
-        self.audio_selecionado.set(self.audios[0])  # Define o primeiro áudio como padrão
+        self.audio_selecionado.set(self.audios[0] if self.audios else "Sem áudios disponíveis")
+        audio_frame = tk.Frame(self.root, bg="#f0f4f7")
+        audio_frame.pack(pady=10)
         self.audio_menu = tk.OptionMenu(audio_frame, self.audio_selecionado, *self.audios)
         self.audio_menu.config(width=25)
         self.audio_menu.grid(row=0, column=0, padx=10)
-        
-        # Testar Áudio
-        self.teste_audio_button = tk.Button(audio_frame, text="Testar Áudio", command=self.testar_audio, bg="#3e8e41", fg="white", relief="flat", font=("Arial", 12))
-        self.teste_audio_button.grid(row=0, column=1, padx=10)
-        
-        # Desligar Áudio
-        self.desligar_alarme_button = tk.Button(self.root, text="Desligar Áudio", command=self.desligar_audio, state=tk.DISABLED, bg="#e74c3c", fg="white", relief="flat", font=("Arial", 12))
+
+        self.teste_audio_button = tk.Button(audio_frame, text="Testar Áudio", command=self.testar_audio, bg="#3e8e41", fg="white")
+        self.teste_audio_button.grid(row=0, column=1, padx=(0, 50)) 
+       
+        # Controle de volume
+        volume_frame = tk.Frame(self.root, bg="#f0f4f7")
+        volume_frame.pack()
+
+        volume_label = tk.Label(volume_frame, text="Volume:", bg="#f0f4f7")
+        volume_label.pack(side=tk.TOP, pady=(0, 2))  # Coloca a palavra 'Volume' acima da barra, com espaço
+
+        self.volume_slider = tk.Scale(
+            volume_frame, from_=0, to=100, orient="horizontal", command=self.ajustar_volume, bg="#f0f4f7"
+        )
+        self.volume_slider.set(50)
+        self.volume_slider.pack() 
+
+
+        # Botões adicionais
+        self.desligar_alarme_button = tk.Button(self.root, text="Desligar Áudio", command=self.desligar_audio, state=tk.DISABLED, bg="#e74c3c", fg="white")
         self.desligar_alarme_button.pack(pady=10)
-        
-        # Adicionar Áudio
-        self.adicionar_audio_button = tk.Button(self.root, text="Adicionar Áudio", command=self.adicionar_audio, bg="#f39c12", fg="white", relief="flat", font=("Arial", 12))
+
+        self.adicionar_audio_button = tk.Button(self.root, text="Adicionar Áudio", command=self.adicionar_audio, bg="#f39c12", fg="white")
         self.adicionar_audio_button.pack(pady=10)
-        
-        # Inicia a atualização da interface
+
+        # Atualização e monitoramento
         self.atualizar_interface()
-        
-        # Inicia o monitoramento de eventos em uma thread separada
         threading.Thread(target=self.verificar_eventos, daemon=True).start()
+
+    def ajustar_volume(self, volume):
+        try:
+            pygame.mixer.music.set_volume(int(volume) / 100)
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao ajustar volume: {e}")
 
     def carregar_audios(self):
         """Carrega os arquivos de áudio no diretório."""
@@ -135,23 +145,21 @@ class App:
                 return evento["hora"], int(tempo_restante), evento["tipo"]
         return None, None, None
 
-        def testar_audio(self):
-            """Reproduz o áudio selecionado para teste.""" 
-            global alarme_som, audio_em_reproducao
-            try:
-                alarme_som = os.path.join(diretorio_audios, self.audio_selecionado.get())  
-                
-                # Verifique se o arquivo de áudio existe antes de tentar carregar
-                if not os.path.exists(alarme_som):
-                    raise FileNotFoundError(f"Arquivo de áudio não encontrado: {alarme_som}")
-                
-                pygame.mixer.music.load(alarme_som)
-                pygame.mixer.music.play()
-                audio_em_reproducao = True  
-                self.desligar_alarme_button.config(state=tk.NORMAL)  
-            except Exception as e:
-                messagebox.showerror("Erro", f"Erro ao tocar o áudio: {e}")
+    def testar_audio(self):
+        global alarme_som, audio_em_reproducao
+        try:
+            alarme_som = os.path.join(diretorio_audios, self.audio_selecionado.get())
 
+            # Verifique se o arquivo de áudio existe antes de tentar carregar
+            if not os.path.exists(alarme_som):
+                raise FileNotFoundError(f"Arquivo de áudio não encontrado: {alarme_som}")
+
+            pygame.mixer.music.load(alarme_som)
+            pygame.mixer.music.play()
+            audio_em_reproducao = True
+            self.desligar_alarme_button.config(state=tk.NORMAL)
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao tocar o áudio: {e}")
 
     def tocar_alarme(self):
         """Reproduz o som do alarme e habilita o botão para desligar.""" 
@@ -197,7 +205,7 @@ class App:
                 os.makedirs(diretorio_audios)
             shutil.copy(arquivo_audio, destino)
             self.audios = self.carregar_audios()
-            self.audio_selecionado.set(self.audios[0])  # Seleciona o primeiro áudio da lista
+            self.audio_selecionado.set(self.audios[0])  
 
 if __name__ == "__main__":
     root = tk.Tk()
